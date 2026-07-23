@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -16,7 +16,7 @@ func TestCleanInput(t *testing.T) {
 		},
 		{
 			input:    "",
-			expected: []string{},
+			expected: []string(nil),
 		},
 		{
 			input:    "123, testing",
@@ -27,10 +27,12 @@ func TestCleanInput(t *testing.T) {
 			expected: []string{"hello", "world", "!!"},
 		},
 	}
-	for _, c := range cases {
-		result := cleanInput(c.input)
-		if len(result) != len(c.expected) {
-			fmt.Printf("Expected length: %v - Actual: %v/n", len(c.expected), len(result))
+
+	for i, c := range cases {
+		actual := cleanInput(c.input)
+		expected := c.expected
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Test %v: expected %#v, actual %#v", i+1, c.expected, actual)
 		}
 	}
 }
