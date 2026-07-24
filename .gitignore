@@ -1,3 +1,8 @@
 # Executable files
 
 gopokedex
+
+
+# Log files
+
+*.log
