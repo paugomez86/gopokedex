@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/paugomez86/gopokedex/pokecache"
+	"github.com/paugomez86/gopokedex/internal/pokecache"
 )
 
 type config struct {
@@ -13,10 +13,12 @@ type config struct {
 }
 
 func main() {
+	const cacheInterval = time.Millisecond * 5000
+
 	c := config{
 		next:     nil,
 		previous: nil,
-		cache:    pokecache.NewCache(time.Second * 10),
+		cache:    pokecache.NewCache(cacheInterval),
 	}
 	startRepl(&c)
 }

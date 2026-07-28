@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -115,20 +116,34 @@ func commandMap(c *config) error {
 		}
 	}
 
-	res, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("Error fetching PokeApi: %v\n", err)
-	}
-	defer res.Body.Close()
+	// Cache checking
+	var response Response
+	var data []byte
 
-	var data Response
-	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&data); err != nil {
-		return fmt.Errorf("Error decoding JSON: %v\n", err)
+	if val, ok := c.cache.Get(url); ok {
+		data = val
+	} else {
+		res, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("Error fetching PokeApi: %v\n", err)
+		}
+		defer res.Body.Close()
+
+		data, err = io.ReadAll(res.Body)
+		if err != nil {
+			return fmt.Errorf("Error reading JSON response: %v\n", err)
+		}
+
+		c.cache.Add(url, data)
 	}
-	c.next = data.Next
-	c.previous = data.Previous
-	areas := data.Results
+
+	if err := json.Unmarshal(data, &response); err != nil {
+		return fmt.Errorf("Error decodiing JSON response: %v\n", err)
+	}
+
+	c.next = response.Next
+	c.previous = response.Previous
+	areas := response.Results
 
 	for _, area := range areas {
 		fmt.Println(area.Name)
@@ -154,20 +169,34 @@ func commandMapb(c *config) error {
 		return nil
 	}
 
-	res, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("Error fetching PokeApi: %v\n", err)
-	}
-	defer res.Body.Close()
+	// Cache checking
+	var response Response
+	var data []byte
 
-	var data Response
-	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&data); err != nil {
-		return fmt.Errorf("Error decoding JSON: %v\n", err)
+	if val, ok := c.cache.Get(url); ok {
+		data = val
+	} else {
+		res, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("Error fetching PokeApi: %v\n", err)
+		}
+		defer res.Body.Close()
+
+		data, err = io.ReadAll(res.Body)
+		if err != nil {
+			return fmt.Errorf("Error reading JSON response: %v\n", err)
+		}
+
+		c.cache.Add(url, data)
 	}
-	c.next = data.Next
-	c.previous = data.Previous
-	areas := data.Results
+
+	if err := json.Unmarshal(data, &response); err != nil {
+		return fmt.Errorf("Error decodiing JSON response: %v\n", err)
+	}
+
+	c.next = response.Next
+	c.previous = response.Previous
+	areas := response.Results
 
 	for _, area := range areas {
 		fmt.Println(area.Name)

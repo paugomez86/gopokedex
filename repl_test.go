@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -29,10 +30,12 @@ func TestCleanInput(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		actual := cleanInput(c.input)
-		expected := c.expected
-		if !reflect.DeepEqual(expected, actual) {
-			t.Errorf("Test %v: expected %#v, actual %#v", i+1, c.expected, actual)
-		}
+		t.Run(fmt.Sprintf("Test case %v", i), func(t *testing.T) {
+			actual := cleanInput(c.input)
+			expected := c.expected
+			if !reflect.DeepEqual(expected, actual) {
+				t.Errorf("Expected value: %#v, actual value: %#v", c.expected, actual)
+			}
+		})
 	}
 }
