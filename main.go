@@ -7,18 +7,18 @@ import (
 )
 
 type config struct {
-	next     *string
-	previous *string
-	cache    *pokecache.Cache
+	nextPage     *string
+	previousPage *string
+	cache        *pokecache.Cache
 }
 
 func main() {
 	const cacheInterval = time.Millisecond * 5000
 
 	c := config{
-		next:     nil,
-		previous: nil,
-		cache:    pokecache.NewCache(cacheInterval),
+		nextPage:     nil,
+		previousPage: nil,
+		cache:        pokecache.NewCache(cacheInterval),
 	}
 	startRepl(&c)
 }
