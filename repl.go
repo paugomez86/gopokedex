@@ -129,11 +129,11 @@ func commandMap(c *config, args []string) error {
 	// The url handles the pagination along with the config struct.
 	// config stores the next and/or previous urls to call in order to loop through the entire list.
 	var url string
-	if c.nextPage == nil && c.previousPage == nil {
+	if c.pagination.next == nil && c.pagination.previous == nil {
 		url = "https://pokeapi.co/api/v2/location-area/"
 	} else {
-		if c.nextPage != nil {
-			url = *c.nextPage
+		if c.pagination.next != nil {
+			url = *c.pagination.next
 		} else {
 			fmt.Println("you're on the last page")
 			return nil
@@ -158,8 +158,8 @@ func commandMap(c *config, args []string) error {
 		return fmt.Errorf("Error decoding JSON response: %v\n", err)
 	}
 
-	c.nextPage = response.Next
-	c.previousPage = response.Previous
+	c.pagination.next = response.Next
+	c.pagination.previous = response.Previous
 	areas := response.Results
 
 	for _, area := range areas {
@@ -183,8 +183,8 @@ func commandMapb(c *config, args []string) error {
 	}
 
 	var url string
-	if c.previousPage != nil {
-		url = *c.previousPage
+	if c.pagination.next != nil {
+		url = *c.pagination.previous
 	} else {
 		fmt.Println("You're on the first page")
 		return nil
@@ -208,8 +208,8 @@ func commandMapb(c *config, args []string) error {
 		return fmt.Errorf("Error decoding JSON response: %v\n", err)
 	}
 
-	c.nextPage = response.Next
-	c.previousPage = response.Previous
+	c.pagination.next = response.Next
+	c.pagination.previous = response.Previous
 	areas := response.Results
 
 	for _, area := range areas {
@@ -234,7 +234,6 @@ func commandExplore(c *config, args []string) error {
 
 	url := "https://pokeapi.co/api/v2/location-area/" + args[0]
 
-	// Checking if url key is in cache
 	var data []byte
 
 	if cachedData, ok := c.cache.Get(url); ok {
@@ -270,7 +269,7 @@ func commandCatch(c *config, args []string) error {
 	url := "https://pokeapi.co/api/v2/pokemon/" + args[0]
 
 	// Checking if url key is in cache
-	var data []byte
+	/* var data []byte
 
 	if cachedData, ok := c.cache.Get(url); ok {
 		data = cachedData
@@ -285,6 +284,18 @@ func commandCatch(c *config, args []string) error {
 	var pokemon helpers.Pokemon
 	if err := json.Unmarshal(data, &pokemon); err != nil {
 		return fmt.Errorf("Error decoding JSON response: %v\n", err)
+	}
+	*/
+
+	var resource helpers.Resource = helpers.Pokemon{}
+
+	val, err := resource.Unmarshal(url, c.cache)
+	if err != nil {
+		return err
+	}
+	pokemon, ok := val.(helpers.Pokemon)
+	if !ok {
+		return fmt.Errorf("Error decoding JSON response.\n")
 	}
 
 	fmt.Printf("Throwing a Pokeball at %v...\n", pokemon.Name)

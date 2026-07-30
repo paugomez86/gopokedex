@@ -1,17 +1,48 @@
 package helpers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"strings"
+
+	"github.com/paugomez86/gopokedex/internal/pokecache"
 )
+
+type Resource interface {
+	Unmarshal(string, *pokecache.Cache) (any, error)
+}
 
 type Pokemon struct {
 	Id             int    `json:"id"`
 	Name           string `json:"name"`
 	BaseExperience int    `json:"base_experience"`
+}
+
+type LocationAreas struct {
+}
+
+func (p Pokemon) Unmarshal(url string, c *pokecache.Cache) (any, error) {
+	// Checking if url key is in cache
+	var data []byte
+
+	if cachedData, ok := c.Get(url); ok {
+		data = cachedData
+	} else {
+		var err error
+		if data, err = FetchResoruces(url); err != nil {
+			return p, err
+		}
+		c.Add(url, data)
+	}
+
+	if err := json.Unmarshal(data, &p); err != nil {
+		return p, fmt.Errorf("Error decoding JSON response: %v\n", err)
+	}
+
+	return p, nil
 }
 
 // Takes a string as input and returns a slice of its words using a whitespace as separator.
