@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"strings"
+	"time"
+
+	"github.com/paugomez86/gopokedex/internal/helpers"
 )
 
 type cliCommand struct {
@@ -24,7 +24,7 @@ func startRepl(c *config) {
 	for {
 		fmt.Print("Pokedex > ")
 		for scanner.Scan() {
-			input := cleanInput(scanner.Text())
+			input := helpers.CleanInput(scanner.Text())
 			if command, ok := replCommands[input[0]]; !ok {
 				fmt.Println("Unknown command")
 			} else {
@@ -72,19 +72,13 @@ func getCommands() map[string]cliCommand {
 			callback:    commandExplore,
 			args:        []string{"area_name"},
 		},
+		"catch": {
+			name:        "catch",
+			description: "Trys to catch the given pokemon. It may fail!",
+			callback:    commandCatch,
+			args:        []string{"pokemon_name"},
+		},
 	}
-}
-
-// Takes a string as input and returns a slice of its words using a whitespace as separator.
-// The resulting words are lowercased and trimmed of leading and trailing whitespaces.
-func cleanInput(input string) []string {
-	var words []string
-	for w := range strings.SplitSeq(input, " ") {
-		if w != "" {
-			words = append(words, strings.Trim(strings.ToLower(w), " "))
-		}
-	}
-	return words
 }
 
 // Quits the program.
@@ -146,29 +140,22 @@ func commandMap(c *config, args []string) error {
 		}
 	}
 
-	// Cache checking
-	var response Response
+	// Checking if url key is in cache
 	var data []byte
 
-	if val, ok := c.cache.Get(url); ok {
-		data = val
+	if cachedData, ok := c.cache.Get(url); ok {
+		data = cachedData
 	} else {
-		res, err := http.Get(url)
-		if err != nil {
-			return fmt.Errorf("Error fetching PokeApi: %command\n", err)
+		var err error
+		if data, err = helpers.FetchResoruces(url); err != nil {
+			return err
 		}
-		defer res.Body.Close()
-
-		data, err = io.ReadAll(res.Body)
-		if err != nil {
-			return fmt.Errorf("Error reading JSON response: %command\n", err)
-		}
-
 		c.cache.Add(url, data)
 	}
 
+	var response Response
 	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %command\n", err)
+		return fmt.Errorf("Error decoding JSON response: %v\n", err)
 	}
 
 	c.nextPage = response.Next
@@ -176,7 +163,7 @@ func commandMap(c *config, args []string) error {
 	areas := response.Results
 
 	for _, area := range areas {
-		fmt.Println(area.Name)
+		fmt.Printf("%v\n", area.Name)
 	}
 	return nil
 }
@@ -203,29 +190,22 @@ func commandMapb(c *config, args []string) error {
 		return nil
 	}
 
-	// Cache checking
-	var response Response
+	// Checking if url key is in cache
 	var data []byte
 
-	if val, ok := c.cache.Get(url); ok {
-		data = val
+	if cachedData, ok := c.cache.Get(url); ok {
+		data = cachedData
 	} else {
-		res, err := http.Get(url)
-		if err != nil {
-			return fmt.Errorf("Error fetching PokeApi: %command\n", err)
+		var err error
+		if data, err = helpers.FetchResoruces(url); err != nil {
+			return err
 		}
-		defer res.Body.Close()
-
-		data, err = io.ReadAll(res.Body)
-		if err != nil {
-			return fmt.Errorf("Error reading JSON response: %command\n", err)
-		}
-
 		c.cache.Add(url, data)
 	}
 
+	var response Response
 	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %command\n", err)
+		return fmt.Errorf("Error decoding JSON response: %v\n", err)
 	}
 
 	c.nextPage = response.Next
@@ -233,7 +213,7 @@ func commandMapb(c *config, args []string) error {
 	areas := response.Results
 
 	for _, area := range areas {
-		fmt.Println(area.Name)
+		fmt.Printf("%v\n", area.Name)
 	}
 	return nil
 }
@@ -254,26 +234,66 @@ func commandExplore(c *config, args []string) error {
 
 	url := "https://pokeapi.co/api/v2/location-area/" + args[0]
 
-	res, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("Error fetching PokeApi: %command\n", err)
-	}
-	defer res.Body.Close()
+	// Checking if url key is in cache
+	var data []byte
 
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return fmt.Errorf("Error reading JSON response: %command\n", err)
+	if cachedData, ok := c.cache.Get(url); ok {
+		data = cachedData
+	} else {
+		var err error
+		if data, err = helpers.FetchResoruces(url); err != nil {
+			return err
+		}
+		c.cache.Add(url, data)
 	}
 
 	var response Response
 	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %command\n", err)
+		return fmt.Errorf("Error decoding JSON response: %v\n", err)
 	}
 
 	pokemon := response.PokemonEncounters
 
+	fmt.Printf("Exploring %v...\n", args[0])
 	for _, p := range pokemon {
-		fmt.Println(p.Pokemon.Name)
+		fmt.Printf(" - %v\n", p.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandCatch(c *config, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("Expected 1 argument")
+	}
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + args[0]
+
+	// Checking if url key is in cache
+	var data []byte
+
+	if cachedData, ok := c.cache.Get(url); ok {
+		data = cachedData
+	} else {
+		var err error
+		if data, err = helpers.FetchResoruces(url); err != nil {
+			return err
+		}
+		c.cache.Add(url, data)
+	}
+
+	var pokemon helpers.Pokemon
+	if err := json.Unmarshal(data, &pokemon); err != nil {
+		return fmt.Errorf("Error decoding JSON response: %v\n", err)
+	}
+
+	fmt.Printf("Throwing a Pokeball at %v...\n", pokemon.Name)
+	time.Sleep(time.Second * 1)
+	if helpers.TryCatchPokemon(pokemon) {
+		fmt.Printf("%v was caught!\n", pokemon.Name)
+		c.caught[pokemon.Name] = pokemon
+	} else {
+		fmt.Printf("%v escaped!\n", pokemon.Name)
 	}
 
 	return nil

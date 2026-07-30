@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/paugomez86/gopokedex/internal/helpers"
 )
 
 func TestCleanInput(t *testing.T) {
@@ -31,7 +33,7 @@ func TestCleanInput(t *testing.T) {
 
 	for i, c := range cases {
 		t.Run(fmt.Sprintf("Test case %v", i), func(t *testing.T) {
-			actual := cleanInput(c.input)
+			actual := helpers.CleanInput(c.input)
 			expected := c.expected
 			if !reflect.DeepEqual(expected, actual) {
 				t.Errorf("Expected value: %#v, actual value: %#v", c.expected, actual)
