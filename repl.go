@@ -80,13 +80,18 @@ func getCommands() map[string]cliCommand {
 			callback:    commandInspect,
 			args:        []string{"pokemon_name"},
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "List the contents of your pokemon collection.",
+			callback:    commandPokedex,
+		},
 	}
 }
 
 // Quits the program.
 func commandExit(c *config, args []string) error {
 	if len(args) > 0 {
-		return fmt.Errorf("Too many arguments")
+		return fmt.Errorf("No arguments expected")
 	}
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
@@ -96,11 +101,11 @@ func commandExit(c *config, args []string) error {
 // Displays the available commands.
 func commandHelp(c *config, args []string) error {
 	if len(args) > 0 {
-		return fmt.Errorf("Too many arguments")
+		return fmt.Errorf("No arguments expected")
 	}
 
 	fmt.Println("Welcome to the Pokedex!")
-	fmt.Printf("Usage:\n\n")
+	fmt.Printf("Usage:\n")
 	for _, command := range getCommands() {
 		fmt.Printf("%v", command.name)
 		if command.args != nil {
@@ -118,7 +123,7 @@ func commandHelp(c *config, args []string) error {
 func commandMap(c *config, args []string) error {
 	// Argument handle
 	if len(args) > 1 {
-		return fmt.Errorf("Too many arguments")
+		return fmt.Errorf("Expected none or 1 argument")
 	}
 	back := false
 	if slices.Contains(args, "b") {
@@ -135,14 +140,14 @@ func commandMap(c *config, args []string) error {
 			if c.pagination.next != nil {
 				url = *c.pagination.next
 			} else {
-				fmt.Println("you're on the last page")
+				fmt.Println(" you're on the last page")
 				return nil
 			}
 		} else {
 			if c.pagination.previous != nil {
 				url = *c.pagination.previous
 			} else {
-				fmt.Println("you're on the first page")
+				fmt.Println(" you're on the first page")
 				return nil
 			}
 		}
@@ -166,7 +171,7 @@ func commandMap(c *config, args []string) error {
 
 	// Displaying data
 	for _, area := range areas {
-		fmt.Printf("%v\n", area.Name)
+		fmt.Printf(" %v\n", area.Name)
 	}
 	return nil
 }
@@ -227,10 +232,10 @@ func commandCatch(c *config, args []string) error {
 	fmt.Printf("Throwing a Pokeball at %v...\n", pokemon.Name)
 	time.Sleep(time.Millisecond * 500)
 	if helpers.TryCatchPokemon(pokemon) {
-		fmt.Printf("%v was caught!\n", pokemon.Name)
+		fmt.Printf(" %v was caught!\n", pokemon.Name)
 		c.caught[pokemon.Name] = pokemon
 	} else {
-		fmt.Printf("%v escaped!\n", pokemon.Name)
+		fmt.Printf(" %v escaped!\n", pokemon.Name)
 	}
 
 	return nil
@@ -243,10 +248,44 @@ func commandInspect(c *config, args []string) error {
 	}
 
 	// Checking if the given pokemon is in config.caught.
-	if _, ok := c.caught[args[0]]; !ok {
-		fmt.Printf("you have not caught %v\n", args[0])
+	pokemon, ok := c.caught[args[0]]
+	if !ok {
+		fmt.Printf(" you have not caught %v\n", args[0])
 		return nil
 	}
 
+	// Displaying data
+	fmt.Printf("Name: %v\n", pokemon.Name)
+	fmt.Printf("ID: %v\n", pokemon.Id)
+	fmt.Printf("Height: %v\n", pokemon.Height)
+	fmt.Printf("Weight: %v\n", pokemon.Weight)
+	fmt.Printf("Stats:\n")
+	for _, stat := range pokemon.Stats {
+		fmt.Printf(" -%v: %v\n", stat.Stat.Name, stat.BaseStat)
+	}
+	fmt.Printf("Types:\n")
+	for _, t := range pokemon.Types {
+		fmt.Printf(" -%v\n", t.Type.Name)
+	}
+
+	return nil
+}
+
+func commandPokedex(c *config, args []string) error {
+	// Argument handle
+	if len(args) > 0 {
+		return fmt.Errorf("No arguments expected")
+	}
+
+	// Displaying collection
+	if len(c.caught) == 0 {
+		fmt.Println(" you have no pokemon in your collection")
+		return nil
+	}
+
+	fmt.Println("Your Pokedex:")
+	for _, pokemon := range helpers.GetOrderedCollection(c.caught) {
+		fmt.Printf(" %v. %v\n", pokemon.Id, pokemon.Name)
+	}
 	return nil
 }

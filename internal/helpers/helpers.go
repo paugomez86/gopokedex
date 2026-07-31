@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/paugomez86/gopokedex/internal/pokecache"
@@ -150,4 +151,18 @@ func TryCatchPokemon(p Pokemon) bool {
 		return true
 	}
 	return false
+}
+
+func GetOrderedCollection(m map[string]Pokemon) []Pokemon {
+	list := make([]Pokemon, 0, len(m))
+
+	for _, p := range m {
+		list = append(list, p)
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Id < list[j].Id
+	})
+
+	return list
 }
