@@ -146,6 +146,7 @@ func FetchResoruces(url string) ([]byte, error) {
 	return data, nil
 }
 
+// Rand function to decide if the pokemon is caught
 func TryCatchPokemon(p Pokemon) bool {
 	if rand.Float64() >= (min(float64(p.BaseExperience), 300)/300)/2+0.1 {
 		return true
@@ -153,6 +154,7 @@ func TryCatchPokemon(p Pokemon) bool {
 	return false
 }
 
+// Gets the map containing the caught pokemon and returns it as an ordered list (by ID)
 func GetOrderedCollection(m map[string]Pokemon) []Pokemon {
 	list := make([]Pokemon, 0, len(m))
 

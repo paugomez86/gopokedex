@@ -207,6 +207,7 @@ func commandExplore(c *config, args []string) error {
 	return nil
 }
 
+// Takes 1 pokemon name as arg and trys to catch and add it to the collection
 func commandCatch(c *config, args []string) error {
 	// Argument handle
 	if len(args) != 1 {
@@ -241,6 +242,7 @@ func commandCatch(c *config, args []string) error {
 	return nil
 }
 
+// Inspects and lists the stats and data of the given pokemon if it's in c.caught
 func commandInspect(c *config, args []string) error {
 	// Argument handle
 	if len(args) != 1 {
@@ -271,6 +273,7 @@ func commandInspect(c *config, args []string) error {
 	return nil
 }
 
+// Lists the contents of c.caught. Takes no args
 func commandPokedex(c *config, args []string) error {
 	// Argument handle
 	if len(args) > 0 {
