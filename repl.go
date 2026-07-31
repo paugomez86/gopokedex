@@ -74,6 +74,12 @@ func getCommands() map[string]cliCommand {
 			callback:    commandCatch,
 			args:        []string{"pokemon_name"},
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect the given pokemon if it's in your collection.",
+			callback:    commandInspect,
+			args:        []string{"pokemon_name"},
+		},
 	}
 }
 
@@ -225,6 +231,21 @@ func commandCatch(c *config, args []string) error {
 		c.caught[pokemon.Name] = pokemon
 	} else {
 		fmt.Printf("%v escaped!\n", pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(c *config, args []string) error {
+	// Argument handle
+	if len(args) != 1 {
+		return fmt.Errorf("Expected 1 argument")
+	}
+
+	// Checking if the given pokemon is in config.caught.
+	if _, ok := c.caught[args[0]]; !ok {
+		fmt.Printf("you have not caught %v\n", args[0])
+		return nil
 	}
 
 	return nil
