@@ -77,7 +77,7 @@ func FetchResoruces(url string) ([]byte, error) {
 }
 
 func TryCatchPokemon(p Pokemon) bool {
-	if rand.Float64() >= (min(float64(p.BaseExperience))/300)/2+0.1 {
+	if rand.Float64() >= (min(float64(p.BaseExperience), 300)/300)/2+0.1 {
 		return true
 	}
 	return false
