@@ -19,7 +19,7 @@ type pagination struct {
 }
 
 func main() {
-	const cacheDuration = time.Millisecond * 5000
+	const cacheDuration = time.Millisecond * 15000
 
 	c := config{
 		pagination: pagination{

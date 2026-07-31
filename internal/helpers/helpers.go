@@ -12,6 +12,10 @@ import (
 )
 
 type Resource interface {
+	// Gets the url to fetch and the cache pointer in Config.
+	// It checks if the data in cached, if not, it makes the request,
+	// unmarshals it into a struct and returns it as an interface.
+	// Handles errors.
 	Unmarshal(string, *pokecache.Cache) (any, error)
 }
 
@@ -21,11 +25,63 @@ type Pokemon struct {
 	BaseExperience int    `json:"base_experience"`
 }
 
-type LocationAreas struct {
+type LocationArea struct {
+	Next     *string `json:"next"`
+	Previous *string `json:"previous"`
+	Results  []struct {
+		Name string `json:"name"`
+	} `json:"results"`
+}
+
+type PokemonEncounters struct {
+	PokemonEncounters []struct {
+		Pokemon struct {
+			Name string `json:"name"`
+		} `json:"pokemon"`
+	} `json:"pokemon_encounters"`
 }
 
 func (p Pokemon) Unmarshal(url string, c *pokecache.Cache) (any, error) {
-	// Checking if url key is in cache
+	var data []byte
+
+	if cachedData, ok := c.Get(url); ok {
+		data = cachedData
+	} else {
+		var err error
+		if data, err = FetchResoruces(url); err != nil {
+			return p, err
+		}
+		c.Add(url, data)
+	}
+
+	if err := json.Unmarshal(data, &p); err != nil {
+		return p, fmt.Errorf("Error decoding JSON response: %v\n", err)
+	}
+
+	return p, nil
+}
+
+func (l LocationArea) Unmarshal(url string, c *pokecache.Cache) (any, error) {
+	var data []byte
+
+	if cachedData, ok := c.Get(url); ok {
+		data = cachedData
+	} else {
+		var err error
+		if data, err = FetchResoruces(url); err != nil {
+			return l, err
+		}
+		c.Add(url, data)
+	}
+
+	if err := json.Unmarshal(data, &l); err != nil {
+		return l, fmt.Errorf("Error decoding JSON response: %v\n", err)
+	}
+
+	return l, nil
+}
+
+func (p PokemonEncounters) Unmarshal(url string, c *pokecache.Cache) (any, error) {
 	var data []byte
 
 	if cachedData, ok := c.Get(url); ok {

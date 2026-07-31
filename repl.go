@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/paugomez86/gopokedex/internal/helpers"
@@ -60,11 +60,7 @@ func getCommands() map[string]cliCommand {
 			name:        "map",
 			description: "Displays 20 location areas. Subsequent map commands display the 20 next.",
 			callback:    commandMap,
-		},
-		"mapb": {
-			name:        "mapb",
-			description: "Displays the previous 20 locations when used after the map command.",
-			callback:    commandMapb,
+			args:        []string{"b"},
 		},
 		"explore": {
 			name:        "explore",
@@ -114,104 +110,55 @@ func commandHelp(c *config, args []string) error {
 
 // Displays the 20 first location areas of the Pokemon world. Subsequent calls print the next 20 results.
 func commandMap(c *config, args []string) error {
-	type Response struct {
-		Next     *string `json:"next"`
-		Previous *string `json:"previous"`
-		Results  []struct {
-			Name string `json:"name"`
-		} `json:"results"`
-	}
-
-	if len(args) > 0 {
+	// Argument handle
+	if len(args) > 1 {
 		return fmt.Errorf("Too many arguments")
+	}
+	back := false
+	if slices.Contains(args, "b") {
+		back = true
 	}
 
 	// The url handles the pagination along with the config struct.
-	// config stores the next and/or previous urls to call in order to loop through the entire list.
+	// config.pagination stores the next and/or previous urls to call in order to loop through the entire list.
 	var url string
 	if c.pagination.next == nil && c.pagination.previous == nil {
 		url = "https://pokeapi.co/api/v2/location-area/"
 	} else {
-		if c.pagination.next != nil {
-			url = *c.pagination.next
+		if !back {
+			if c.pagination.next != nil {
+				url = *c.pagination.next
+			} else {
+				fmt.Println("you're on the last page")
+				return nil
+			}
 		} else {
-			fmt.Println("you're on the last page")
-			return nil
+			if c.pagination.previous != nil {
+				url = *c.pagination.previous
+			} else {
+				fmt.Println("you're on the first page")
+				return nil
+			}
 		}
 	}
 
-	// Checking if url key is in cache
-	var data []byte
+	// Fetching resource
+	var resource helpers.Resource = helpers.LocationArea{}
 
-	if cachedData, ok := c.cache.Get(url); ok {
-		data = cachedData
-	} else {
-		var err error
-		if data, err = helpers.FetchResoruces(url); err != nil {
-			return err
-		}
-		c.cache.Add(url, data)
+	data, err := resource.Unmarshal(url, c.cache)
+	if err != nil {
+		return err
+	}
+	locationArea, ok := data.(helpers.LocationArea)
+	if !ok {
+		return fmt.Errorf("Error decoding JSON response.\n")
 	}
 
-	var response Response
-	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %v\n", err)
-	}
+	c.pagination.next = locationArea.Next
+	c.pagination.previous = locationArea.Previous
+	areas := locationArea.Results
 
-	c.pagination.next = response.Next
-	c.pagination.previous = response.Previous
-	areas := response.Results
-
-	for _, area := range areas {
-		fmt.Printf("%v\n", area.Name)
-	}
-	return nil
-}
-
-// Displays the previous 20 locations if used after commandMap.
-func commandMapb(c *config, args []string) error {
-	type Response struct {
-		Next     *string `json:"next"`
-		Previous *string `json:"previous"`
-		Results  []struct {
-			Name string `json:"name"`
-		} `json:"results"`
-	}
-
-	if len(args) > 0 {
-		return fmt.Errorf("Too many arguments")
-	}
-
-	var url string
-	if c.pagination.next != nil {
-		url = *c.pagination.previous
-	} else {
-		fmt.Println("You're on the first page")
-		return nil
-	}
-
-	// Checking if url key is in cache
-	var data []byte
-
-	if cachedData, ok := c.cache.Get(url); ok {
-		data = cachedData
-	} else {
-		var err error
-		if data, err = helpers.FetchResoruces(url); err != nil {
-			return err
-		}
-		c.cache.Add(url, data)
-	}
-
-	var response Response
-	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %v\n", err)
-	}
-
-	c.pagination.next = response.Next
-	c.pagination.previous = response.Previous
-	areas := response.Results
-
+	// Displaying data
 	for _, area := range areas {
 		fmt.Printf("%v\n", area.Name)
 	}
@@ -220,41 +167,29 @@ func commandMapb(c *config, args []string) error {
 
 // Displays the list of pokemon likely to be found in the given area in args[0].
 func commandExplore(c *config, args []string) error {
-	type Response struct {
-		PokemonEncounters []struct {
-			Pokemon struct {
-				Name string `json:"name"`
-			} `json:"pokemon"`
-		} `json:"pokemon_encounters"`
-	}
-
+	// Argument handle
 	if len(args) != 1 {
 		return fmt.Errorf("Expected 1 argument")
 	}
 
+	// Url handle
 	url := "https://pokeapi.co/api/v2/location-area/" + args[0]
 
-	var data []byte
+	// Fetching resource
+	var resource helpers.Resource = helpers.PokemonEncounters{}
 
-	if cachedData, ok := c.cache.Get(url); ok {
-		data = cachedData
-	} else {
-		var err error
-		if data, err = helpers.FetchResoruces(url); err != nil {
-			return err
-		}
-		c.cache.Add(url, data)
+	data, err := resource.Unmarshal(url, c.cache)
+	if err != nil {
+		return err
+	}
+	pokemonEncounters, ok := data.(helpers.PokemonEncounters)
+	if !ok {
+		return fmt.Errorf("Error decoding JSON response.\n")
 	}
 
-	var response Response
-	if err := json.Unmarshal(data, &response); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %v\n", err)
-	}
-
-	pokemon := response.PokemonEncounters
-
+	// Displaying data
 	fmt.Printf("Exploring %v...\n", args[0])
-	for _, p := range pokemon {
+	for _, p := range pokemonEncounters.PokemonEncounters {
 		fmt.Printf(" - %v\n", p.Pokemon.Name)
 	}
 
@@ -262,31 +197,15 @@ func commandExplore(c *config, args []string) error {
 }
 
 func commandCatch(c *config, args []string) error {
+	// Argument handle
 	if len(args) != 1 {
 		return fmt.Errorf("Expected 1 argument")
 	}
 
+	// Url handle
 	url := "https://pokeapi.co/api/v2/pokemon/" + args[0]
 
-	// Checking if url key is in cache
-	/* var data []byte
-
-	if cachedData, ok := c.cache.Get(url); ok {
-		data = cachedData
-	} else {
-		var err error
-		if data, err = helpers.FetchResoruces(url); err != nil {
-			return err
-		}
-		c.cache.Add(url, data)
-	}
-
-	var pokemon helpers.Pokemon
-	if err := json.Unmarshal(data, &pokemon); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %v\n", err)
-	}
-	*/
-
+	// Fetching resource
 	var resource helpers.Resource = helpers.Pokemon{}
 
 	val, err := resource.Unmarshal(url, c.cache)
@@ -298,8 +217,9 @@ func commandCatch(c *config, args []string) error {
 		return fmt.Errorf("Error decoding JSON response.\n")
 	}
 
+	// Trying to catch and display info
 	fmt.Printf("Throwing a Pokeball at %v...\n", pokemon.Name)
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Millisecond * 500)
 	if helpers.TryCatchPokemon(pokemon) {
 		fmt.Printf("%v was caught!\n", pokemon.Name)
 		c.caught[pokemon.Name] = pokemon
