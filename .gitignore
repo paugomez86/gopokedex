@@ -6,3 +6,7 @@ gopokedex
 # Log files
 
 *.log
+
+# VS Code
+*.code-workspace
+*.vscode
